@@ -9,6 +9,11 @@ from datetime import date
 
 DB_PATH = os.environ.get("DB_PATH", "music.db")
 
+# Create the database directory if it doesn't exist (needed for Railway volumes)
+_db_dir = os.path.dirname(DB_PATH)
+if _db_dir:
+    os.makedirs(_db_dir, exist_ok=True)
+
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
