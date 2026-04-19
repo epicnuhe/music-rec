@@ -35,11 +35,14 @@ CATEGORY_FEEDS = [
     "https://www.stereogum.com/tag/whats-good/feed/",
 ]
 
-# Skip pure news/event articles — everything else is fair game
+# Skip pure news/event articles and song-focused lists — everything else is fair game
 SKIP_KEYWORDS = [
     "tour dates", "dies at", "dead at", "passes away", "lawsuit",
     "arrest", "fired", "drama", "beef", "beef with", "announces tour",
     "tickets on sale", "festival lineup",
+    "best songs of the week", "songs of the week", "best songs this week",
+    "ranking the performances", "best performances", "grammys performances",
+    "best moments", "worst moments",
 ]
 
 
