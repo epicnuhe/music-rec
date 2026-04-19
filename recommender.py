@@ -4,9 +4,18 @@ Every Sunday evening: pulls the candidate pool, asks Claude to select
 5 albums across the slot structure, and saves the result as a pending digest.
 """
 
+import datetime
 import json
 import logging
 import os
+
+
+class _DateEncoder(json.JSONEncoder):
+    """Makes datetime.date objects JSON-serialisable (PostgreSQL returns them as objects)."""
+    def default(self, obj):
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
+        return super().default(obj)
 
 import anthropic
 
@@ -193,7 +202,7 @@ Please select the 5 albums for this week's digest.
     if older_decade_requested:
         db.mark_older_decade_acted()
     db.record_digest_history(album_ids, world_region)
-    db.save_pending_digest(json.dumps(digest, ensure_ascii=False))
+    db.save_pending_digest(json.dumps(digest, ensure_ascii=False, cls=_DateEncoder))
 
     log.info("Recommendation complete. %d picks saved.", len(enriched_picks))
     return digest
