@@ -40,29 +40,41 @@ Must have strong curatorial framing from a named human editor. Never the obvious
 Something genuinely interesting from the sources this week — shares only partial DNA with the \
 taste profile. Explicitly note what partial overlap makes this a considered stretch, not random. \
 If older_decade_requested is TRUE, pick a pre-2000 album for this slot instead.
-- Slot 3 (world_music): From the designated region passed in the user message. If a \
-scene_followup is requested from the previous region, use that region. Include world_music_context \
-explaining the tradition briefly.
+- Slot 3 (world_music): From the designated region passed in the user message. IMPORTANT: You are \
+NOT limited to the candidate pool for this slot. Draw freely on your knowledge of music from \
+the designated region — any era, any release date. Pick the single most compelling album from \
+that region and tradition that fits this listener's profile. If a strong candidate exists in \
+the pool, use it. Otherwise, recommend from your own knowledge. For the curatorial_framing, \
+draw on your knowledge of how the album has been received critically, its cultural context, \
+and why it matters — write it in the voice of a knowledgeable human curator. Always include \
+a world_music_context note explaining the tradition or scene briefly.
 - Slot 4 (lighter_pick_1): Profile-matched for easier listen qualities. Must be editorially sourced.
 - Slot 5 (lighter_pick_2): Same as Slot 4. Must be a different genre from Slot 4.
 
 CONSTRAINTS:
-- Never recommend albums with recommended=TRUE (they are already in recommendation history).
+- Never recommend albums already in the recommendation history.
 - No genre clustering across the 5 picks.
-- Every pick must have a named human source and curatorial_context.
+- For Slots 1, 2, 4, 5: pick from the candidate pool only, and only albums with curatorial_context.
+- For Slot 3: pool or your own knowledge — your call based on what's strongest.
 - Apply appropriate listener_flags from this list where relevant:
     demanding_listen, lyrically_driven, significant_critical_reputation, immediate_listen, world_music_context
-- Pick albums that have curatorial_context from the sources — if an album has no curatorial_context, skip it.
+
+For the world_music slot, if you are recommending from your own knowledge (not the pool), \
+set album_id to null and include a new_album object with full details.
 
 Return a JSON object with this exact structure (no markdown, no extra text):
 {{
   "picks": [
     {{
-      "album_id": <integer from the candidate pool>,
+      "album_id": <integer from the candidate pool, or null for world_music picks from your knowledge>,
+      "new_album": {{
+        "artist": "...", "album_title": "...", "year": 1990, "country": "...",
+        "genre_tags": ["..."], "curatorial_context": "...", "source_author": "your knowledge"
+      }},
       "slot": "historical_deep_cut" | "contemporary_stretch" | "world_music" | "lighter_pick_1" | "lighter_pick_2",
       "recommendation_rationale": "<why this album for this slot, 2-3 sentences>",
       "listener_flags": ["demanding_listen", ...],
-      "curatorial_framing": "<1-2 sentences in the editor's voice summarizing the curatorial_context>",
+      "curatorial_framing": "<1-2 sentences in curator voice>",
       "world_music_context": "<brief note on tradition/scene, only for world_music slot>"
     }},
     ...
@@ -157,14 +169,33 @@ Please select the 5 albums for this week's digest.
     album_ids = []
     for pick in picks:
         album_id = pick.get("album_id")
-        if not album_id:
+        slot = pick.get("slot")
+
+        # World music pick from Claude's own knowledge (no album_id)
+        if not album_id and slot == "world_music" and pick.get("new_album"):
+            new_album_data = pick["new_album"]
+            new_album_data["source_name"] = "Claude's knowledge"
+            new_album_data["source_url"] = None
+            new_id = db.insert_album(new_album_data)
+            album = db.get_album_by_id(new_id)
+            pick["album"] = album
+            slot_map[str(new_id)] = slot
+            album_ids.append(new_id)
+            enriched_picks.append(pick)
+            log.info("World music pick from knowledge: %s — %s (inserted as id %d)",
+                     new_album_data.get("artist"), new_album_data.get("album_title"), new_id)
             continue
+
+        if not album_id:
+            log.warning("Pick with no album_id and no new_album — skipping")
+            continue
+
         album = db.get_album_by_id(album_id)
         if not album:
             log.warning("album_id %s not found in DB — skipping", album_id)
             continue
         pick["album"] = album
-        slot_map[str(album_id)] = pick.get("slot")
+        slot_map[str(album_id)] = slot
         album_ids.append(album_id)
         enriched_picks.append(pick)
 
