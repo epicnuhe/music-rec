@@ -1,7 +1,13 @@
 """
 Taste profile document — loaded as system prompt context for every recommendation run.
 Built through extended interview, April 2026.
+Supplemented with Spotify listening data when available.
 """
+
+try:
+    from spotify_supplement import SPOTIFY_SUPPLEMENT as _SPOTIFY_SUPPLEMENT
+except ImportError:
+    _SPOTIFY_SUPPLEMENT = None
 
 TASTE_PROFILE = """
 ## Identity and Listening Philosophy
@@ -132,3 +138,7 @@ Genre sweet spot for this register: groove-forward jazz-funk hybrids, warm Brazi
 - Recommend the easy or most accessible entry point to a genre or tradition
 - Reproduce the Spotify failure mode: optimizing for taste confirmation over genuine discovery
 """
+
+# Append Spotify data if available
+if _SPOTIFY_SUPPLEMENT:
+    TASTE_PROFILE = TASTE_PROFILE + "\n\n---\n\n" + _SPOTIFY_SUPPLEMENT
